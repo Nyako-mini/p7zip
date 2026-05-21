@@ -1,9 +1,17 @@
 name: p7zip-release
 
 on:
+  push:
+    branches:
+      - '**'
+
+  pull_request:
+
   release:
     tags:
       - '*'
+
+  workflow_dispatch:
 
 jobs:
   build:
@@ -63,7 +71,16 @@ jobs:
           ./linux-p7zip/bin/7zz a linux-p7zip-linux-arm64.7z linux-p7zip -y
           ./linux-p7zip/bin/7zz a linux-p7zip-linux-arm64.zip linux-p7zip -y
 
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-p7zip-linux-arm64
+          path: |
+            linux-p7zip-linux-arm64.7z
+            linux-p7zip-linux-arm64.zip
+
       - name: Upload release
+        if: github.event_name == 'release'
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
