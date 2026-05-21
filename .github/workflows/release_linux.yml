@@ -7,15 +7,15 @@ on:
 
   pull_request:
 
+  workflow_dispatch:
+
   release:
     tags:
       - '*'
 
-  workflow_dispatch:
-
 jobs:
   build:
-    name: Linux-ARM64-Release
+    name: Linux-ARM64-7za
     runs-on: ubuntu-24.04-arm
 
     steps:
@@ -28,64 +28,51 @@ jobs:
             build-essential \
             gcc \
             g++ \
-            make \
-            cmake
+            make
 
-      - name: Build 7zz
+      - name: Build 7za
         run: |
-          mkdir -p linux-p7zip/bin
-          mkdir -p linux-p7zip/lib
+          mkdir -p release/bin
 
           export PROJECT_ROOT=$(pwd)
 
-          cd CPP/7zip/Bundles/Alone2
+          cd CPP/7zip/Bundles/Alone
 
           make -f makefile.gcc -j$(nproc)
 
-          INSTALL_PREFIX=$PROJECT_ROOT/linux-p7zip \
-          make -f makefile.gcc install
+          cp -f b/g/7za $PROJECT_ROOT/release/bin/
+
+      - name: Strip binary
+        run: |
+          strip release/bin/7za || true
 
       - name: Check binary
         run: |
-          export PROJECT_ROOT=$(pwd)
-
-          git clone https://github.com/jinfeihan57/p7zip_test_utils.git
-
-          cd p7zip_test_utils/check
-
-          bash check.sh $PROJECT_ROOT/linux-p7zip/bin/7zz
-
-      - name: Build 7z.so
-        run: |
-          export PROJECT_ROOT=$(pwd)
-
-          cd CPP/7zip/Bundles/Format7zF
-
-          make -f makefile.gcc -j$(nproc)
-
-          INSTALL_PREFIX=$PROJECT_ROOT/linux-p7zip \
-          make -f makefile.gcc install
+          file release/bin/7za
+          chmod +x release/bin/7za
+          ./release/bin/7za
 
       - name: Package
         run: |
-          ./linux-p7zip/bin/7zz a linux-p7zip-linux-arm64.7z linux-p7zip -y
-          ./linux-p7zip/bin/7zz a linux-p7zip-linux-arm64.zip linux-p7zip -y
+          cd release
+          tar -czf ../7za-linux-arm64.tar.gz .
+          zip -r ../7za-linux-arm64.zip .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: linux-p7zip-linux-arm64
+          name: 7za-linux-arm64
           path: |
-            linux-p7zip-linux-arm64.7z
-            linux-p7zip-linux-arm64.zip
+            7za-linux-arm64.tar.gz
+            7za-linux-arm64.zip
 
       - name: Upload release
         if: github.event_name == 'release'
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: linux-p7zip-linux-arm64.*
+          file: 7za-linux-arm64.*
           tag: ${{ github.ref }}
           overwrite: true
           file_glob: true
-          body: "Linux ARM64 p7zip release"
+          body: "Linux ARM64 7za release"
